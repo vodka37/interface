@@ -24,7 +24,7 @@
 也可以在 PowerShell 中运行：
 
 ```powershell
-.\shake-goose.ps1
+.\run-goose.ps1
 ```
 
 ## 配置
@@ -43,9 +43,9 @@
 命令行参数可临时覆盖配置，例如：
 
 ```powershell
-.\shake-goose.ps1 -Mode ui
-.\shake-goose.ps1 -AdbPath "D:\Program Files\Tencent\Androws\Application\5.10.56.1\adb.exe"
-.\shake-goose.ps1 -Cycles 6 -IntervalMs 80
+.\run-goose.ps1 -Mode ui
+.\run-goose.ps1 -AdbPath "D:\Program Files\Tencent\Androws\Application\5.10.56.1\adb.exe"
+.\run-goose.ps1 -Cycles 6 -IntervalMs 80
 ```
 
 ## 常见问题

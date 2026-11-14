@@ -28,9 +28,15 @@ class ConfigurationTests(unittest.TestCase):
 
 
 class DeliveryContractTests(unittest.TestCase):
+    def test_windows_powershell_51_loader_reads_localized_script_as_utf8(self) -> None:
+        loader = (ROOT / "run-goose.ps1").read_text(encoding="ascii")
+        self.assertIn("-Encoding UTF8", loader)
+        self.assertIn('[ScriptBlock]::Create($source)', loader)
+        self.assertIn("& $implementation @parameters", loader)
+
     def test_launcher_forwards_arguments_and_keeps_failures_visible(self) -> None:
         launcher = (ROOT / "一键颠锅.cmd").read_text(encoding="utf-8")
-        self.assertIn('"%~dp0shake-goose.ps1" %*', launcher)
+        self.assertIn('"%~dp0run-goose.ps1" %*', launcher)
         self.assertRegex(launcher, r"(?i)if errorlevel 1")
         self.assertRegex(launcher, r"(?i)\bpause\b")
 

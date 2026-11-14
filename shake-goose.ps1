@@ -208,7 +208,7 @@ function Invoke-UiElement {
         return
     }
 
-    throw "控件“$($Element.Current.Name)”不支持自动点击。"
+    throw "控件「$($Element.Current.Name)」不支持自动点击。"
 }
 
 function Find-AndrowsWindow {
@@ -252,7 +252,7 @@ function Invoke-UiShake {
     Initialize-UiAutomation
     $window = Find-AndrowsWindow -Title $Title
     if (-not $window) {
-        throw "未找到应用宝中的“$Title”窗口。请先启动应用宝并打开游戏。"
+        throw "未找到应用宝中的「$Title」窗口。请先启动应用宝并打开游戏。"
     }
 
     [void][GooseShaker.NativeWindow]::SetForegroundWindow(
@@ -263,7 +263,7 @@ function Invoke-UiShake {
     if (-not $shake) {
         $toolbox = Find-NamedElement -Root $window -Names @("工具箱")
         if (-not $toolbox) {
-            throw "已找到游戏窗口，但没有识别到“工具箱”。请确认应用宝顶部导航栏可见。"
+            throw "已找到游戏窗口，但没有识别到「工具箱」。请确认应用宝顶部导航栏可见。"
         }
         Invoke-UiElement -Element $toolbox
         Start-Sleep -Milliseconds 350
@@ -274,7 +274,7 @@ function Invoke-UiShake {
     }
 
     if (-not $shake) {
-        throw "已打开“工具箱”，但没有识别到“摇一摇”。请确认当前应用宝版本支持该功能。"
+        throw "已打开「工具箱」，但没有识别到「摇一摇」。请确认当前应用宝版本支持该功能。"
     }
     Invoke-UiElement -Element $shake
 }
@@ -318,11 +318,11 @@ try {
     }
 
     Invoke-UiShake -Title $WindowTitle
-    Write-Host "颠锅完成（应用宝“摇一摇”）。" -ForegroundColor Green
+    Write-Host "颠锅完成（应用宝「摇一摇」）。" -ForegroundColor Green
     exit 0
 }
 catch {
     Write-Host "一键颠锅失败：$($_.Exception.Message)" -ForegroundColor Red
-    Write-Host "排查：先打开应用宝和抓大鹅；新版应用宝需在“设置”中连续点击“性能”7次并开启开发者模式。" -ForegroundColor Yellow
+    Write-Host "排查：先打开应用宝和抓大鹅；新版应用宝需在「设置」中连续点击「性能」7次并开启开发者模式。" -ForegroundColor Yellow
     exit 1
 }

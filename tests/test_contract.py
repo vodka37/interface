@@ -28,6 +28,16 @@ class ConfigurationTests(unittest.TestCase):
 
 
 class DeliveryContractTests(unittest.TestCase):
+    def test_powershell_sources_do_not_contain_smart_quotes(self) -> None:
+        for path in ROOT.glob("*.ps1"):
+            source = path.read_text(encoding="utf-8")
+            for quote in "“”‘’":
+                self.assertNotIn(
+                    quote,
+                    source,
+                    f"{path.name} contains {quote!r}, which PowerShell treats as a quote delimiter",
+                )
+
     def test_windows_powershell_51_loader_reads_localized_script_as_utf8(self) -> None:
         loader = (ROOT / "run-goose.ps1").read_text(encoding="ascii")
         self.assertIn("-Encoding UTF8", loader)

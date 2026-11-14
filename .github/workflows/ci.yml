@@ -61,5 +61,6 @@ jobs:
               throw "Expected cycle-limit error. Output: $output"
             }
           }
+          exit 0
       - name: Run tests
         run: python -m unittest discover -s tests -v

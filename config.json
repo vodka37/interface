@@ -1,0 +1,8 @@
+{
+  "mode": "auto",
+  "adbPath": "",
+  "serial": "127.0.0.1:5555",
+  "windowTitle": "抓大鹅",
+  "cycles": 4,
+  "intervalMs": 100
+}

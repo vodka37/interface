@@ -61,6 +61,10 @@ class DeliveryContractTests(unittest.TestCase):
         self.assertIn("$MaxCycles = 10", SCRIPT)
         validation = "if ($Cycles -lt 1 -or $Cycles -gt $MaxCycles)"
         self.assertIn(validation, SCRIPT)
+        self.assertIn(
+            "颠锅次数 cycles 必须在 1 到 $MaxCycles 之间",
+            SCRIPT,
+        )
         validation_position = SCRIPT.index(validation)
         self.assertLess(validation_position, SCRIPT.rindex("$adb = $null"))
         self.assertLess(validation_position, SCRIPT.rindex("Invoke-UiShake -Title"))

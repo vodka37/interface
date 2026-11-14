@@ -57,8 +57,8 @@ jobs:
             if ($LASTEXITCODE -ne 1) {
               throw "Expected exit code 1 for $($testCase.Label)"
             }
-            if ($output -notmatch "颠锅次数 cycles 必须在 1 到 10 之间") {
-              throw "Expected clear Chinese cycle-limit error. Output: $output"
+            if ($output -notmatch "cycles.+1.+10") {
+              throw "Expected cycle-limit error. Output: $output"
             }
           }
       - name: Run tests

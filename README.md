@@ -37,16 +37,18 @@
 | `adbPath` | `adb.exe` 的完整路径；留空会从 PATH、应用宝注册表和默认安装目录自动查找 |
 | `serial` | 应用宝 ADB 地址，新版默认是 `127.0.0.1:5555` |
 | `windowTitle` | 用来定位游戏窗口的标题，默认 `抓大鹅` |
-| `cycles` | ADB 摇晃循环次数，范围 1–20 |
-| `intervalMs` | ADB 加速度变化间隔，范围 30–1000 毫秒 |
+| `cycles` | 单次进程的颠锅次数，ADB 与界面模式均生效；硬限制为 1–10，越界会在任何操作前报错退出 |
+| `intervalMs` | ADB 加速度变化及 UIA 连续点击之间的间隔，范围 30–1000 毫秒 |
 
 命令行参数可临时覆盖配置，例如：
 
 ```powershell
 .\run-goose.ps1 -Mode ui
 .\run-goose.ps1 -AdbPath "D:\Program Files\Tencent\Androws\Application\5.10.56.1\adb.exe"
-.\run-goose.ps1 -Cycles 6 -IntervalMs 80
+.\run-goose.ps1 -Cycles 10 -IntervalMs 80
 ```
+
+`cycles` 不会被静默截断。配置文件或命令行传入 0、11 等越界值时，程序会在连接 ADB 或操作应用宝窗口之前显示中文错误并退出。为避免 ADB 子进程卡死，单次运行还设有 30 秒总时间上限。
 
 ## 常见问题
 

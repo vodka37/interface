@@ -19,7 +19,7 @@ class ConfigurationTests(unittest.TestCase):
         self.assertEqual(self.config["windowTitle"], "抓大鹅")
 
     def test_shake_timing_is_in_supported_range(self) -> None:
-        self.assertIn(self.config["cycles"], range(1, 21))
+        self.assertIn(self.config["cycles"], range(1, 11))
         self.assertIn(self.config["intervalMs"], range(30, 1001))
 
     def test_all_configuration_keys_are_consumed(self) -> None:
@@ -56,6 +56,28 @@ class DeliveryContractTests(unittest.TestCase):
         self.assertIn("Invoke-UiShake", SCRIPT)
         self.assertIn('@("摇一摇")', SCRIPT)
         self.assertLess(SCRIPT.index("Invoke-AdbShake"), SCRIPT.rindex("Invoke-UiShake"))
+
+    def test_cycle_limit_is_hard_and_checked_before_actions(self) -> None:
+        self.assertIn("$MaxCycles = 10", SCRIPT)
+        validation = "if ($Cycles -lt 1 -or $Cycles -gt $MaxCycles)"
+        self.assertIn(validation, SCRIPT)
+        validation_position = SCRIPT.index(validation)
+        self.assertLess(validation_position, SCRIPT.rindex("$adb = $null"))
+        self.assertLess(validation_position, SCRIPT.rindex("Invoke-UiShake -Title"))
+        self.assertIn("-Repeat $Cycles", SCRIPT)
+
+    def test_runtime_is_bounded_and_all_explicit_loops_are_finite(self) -> None:
+        self.assertIn("$MaxRuntimeSeconds = 30", SCRIPT)
+        self.assertIn("$process.WaitForExit($timeoutMs)", SCRIPT)
+        self.assertIn("$index -lt $Repeat", SCRIPT)
+        self.assertNotRegex(SCRIPT, r"(?im)^\s*(while|do)\b")
+
+    def test_ui_automation_does_not_inject_mouse_or_keyboard_input(self) -> None:
+        powershell = "\n".join(
+            path.read_text(encoding="utf-8") for path in ROOT.glob("*.ps1")
+        )
+        for forbidden_api in ("SetCursorPos", "mouse_event", "SendInput"):
+            self.assertNotRegex(powershell, rf"(?i)\b{forbidden_api}\b")
 
     def test_tool_does_not_install_or_modify_android_packages(self) -> None:
         forbidden_adb_operations = ("install", "uninstall", "push", "pull", "root", "remount")

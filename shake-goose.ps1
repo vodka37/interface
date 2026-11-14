@@ -12,6 +12,8 @@ param(
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
+$MaxCycles = 10
+$MaxRuntimeSeconds = 30
 
 function Get-Config {
     param([string]$Path)
@@ -103,14 +105,36 @@ function Invoke-Adb {
     $process = New-Object System.Diagnostics.Process
     $process.StartInfo = $startInfo
     [void]$process.Start()
+    $timeoutMs = Get-RemainingRuntimeMs
+    if (-not $process.WaitForExit($timeoutMs)) {
+        try {
+            $process.Kill()
+            $process.WaitForExit()
+        }
+        catch {
+            # Preserve the timeout error even if cleanup races with process exit.
+        }
+        throw "ADB 命令超时；单次运行最多允许 $MaxRuntimeSeconds 秒。"
+    }
     $stdout = $process.StandardOutput.ReadToEnd()
     $stderr = $process.StandardError.ReadToEnd()
-    $process.WaitForExit()
 
     return [pscustomobject]@{
         ExitCode = $process.ExitCode
         Output = (($stdout + "`n" + $stderr).Trim())
     }
+}
+
+function Get-RemainingRuntimeMs {
+    $remaining = $Script:RunDeadlineUtc - [DateTime]::UtcNow
+    if ($remaining.TotalMilliseconds -le 0) {
+        throw "已达到单次运行时间上限 $MaxRuntimeSeconds 秒，操作已停止。"
+    }
+    return [Math]::Max(1, [Math]::Min([int]$remaining.TotalMilliseconds, [int]::MaxValue))
+}
+
+function Assert-WithinRuntime {
+    [void](Get-RemainingRuntimeMs)
 }
 
 function Connect-Adb {
@@ -141,6 +165,7 @@ function Invoke-AdbShake {
                 return $false
             }
             Start-Sleep -Milliseconds $DelayMs
+            Assert-WithinRuntime
         }
     }
     return $true
@@ -247,8 +272,13 @@ function Find-AndrowsWindow {
 }
 
 function Invoke-UiShake {
-    param([string]$Title)
+    param(
+        [string]$Title,
+        [int]$Repeat,
+        [int]$DelayMs
+    )
 
+    Assert-WithinRuntime
     Initialize-UiAutomation
     $window = Find-AndrowsWindow -Title $Title
     if (-not $window) {
@@ -259,24 +289,31 @@ function Invoke-UiShake {
         [IntPtr]$window.Current.NativeWindowHandle
     )
 
-    $shake = Find-NamedElement -Root $window -Names @("摇一摇")
-    if (-not $shake) {
-        $toolbox = Find-NamedElement -Root $window -Names @("工具箱")
-        if (-not $toolbox) {
-            throw "已找到游戏窗口，但没有识别到「工具箱」。请确认应用宝顶部导航栏可见。"
+    for ($index = 0; $index -lt $Repeat; $index++) {
+        Assert-WithinRuntime
+        $shake = Find-NamedElement -Root $window -Names @("摇一摇")
+        if (-not $shake) {
+            $toolbox = Find-NamedElement -Root $window -Names @("工具箱")
+            if (-not $toolbox) {
+                throw "已找到游戏窗口，但没有识别到「工具箱」。请确认应用宝顶部导航栏可见。"
+            }
+            Invoke-UiElement -Element $toolbox
+            Start-Sleep -Milliseconds 350
+            Assert-WithinRuntime
+
+            $shake = Find-NamedElement `
+                -Root ([Windows.Automation.AutomationElement]::RootElement) `
+                -Names @("摇一摇")
         }
-        Invoke-UiElement -Element $toolbox
-        Start-Sleep -Milliseconds 350
 
-        $shake = Find-NamedElement `
-            -Root ([Windows.Automation.AutomationElement]::RootElement) `
-            -Names @("摇一摇")
+        if (-not $shake) {
+            throw "已打开「工具箱」，但没有识别到「摇一摇」。请确认当前应用宝版本支持该功能。"
+        }
+        Invoke-UiElement -Element $shake
+        if ($index + 1 -lt $Repeat) {
+            Start-Sleep -Milliseconds $DelayMs
+        }
     }
-
-    if (-not $shake) {
-        throw "已打开「工具箱」，但没有识别到「摇一摇」。请确认当前应用宝版本支持该功能。"
-    }
-    Invoke-UiElement -Element $shake
 }
 
 try {
@@ -291,13 +328,14 @@ try {
     if ($Mode -notin @("auto", "adb", "ui")) {
         throw "mode 必须是 auto、adb 或 ui。"
     }
-    if ($Cycles -lt 1 -or $Cycles -gt 20) {
-        throw "cycles 必须在 1 到 20 之间。"
+    if ($Cycles -lt 1 -or $Cycles -gt $MaxCycles) {
+        throw "颠锅次数 cycles 必须在 1 到 $MaxCycles 之间；当前值为 $Cycles，操作未执行。"
     }
     if ($IntervalMs -lt 30 -or $IntervalMs -gt 1000) {
         throw "intervalMs 必须在 30 到 1000 之间。"
     }
 
+    $Script:RunDeadlineUtc = [DateTime]::UtcNow.AddSeconds($MaxRuntimeSeconds)
     $adb = $null
     if ($Mode -ne "ui") {
         $adb = Find-Adb -ConfiguredPath $AdbPath
@@ -317,7 +355,7 @@ try {
         }
     }
 
-    Invoke-UiShake -Title $WindowTitle
+    Invoke-UiShake -Title $WindowTitle -Repeat $Cycles -DelayMs $IntervalMs
     Write-Host "颠锅完成（应用宝「摇一摇」）。" -ForegroundColor Green
     exit 0
 }

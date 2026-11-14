@@ -37,5 +37,29 @@ jobs:
           if ($errors.Count -gt 0) {
             $errors | Format-List | Out-String | Write-Error
           }
+      - name: Test hard cycle guard
+        shell: powershell
+        run: |
+          chcp 65001 | Out-Null
+          $utf8 = New-Object System.Text.UTF8Encoding($false)
+          [Console]::OutputEncoding = $utf8
+          $OutputEncoding = $utf8
+          $configPath = Join-Path $env:RUNNER_TEMP "invalid-cycles.json"
+          '{"cycles":11}' | Set-Content -LiteralPath $configPath -Encoding UTF8
+          $cases = @(
+            @{ Label = "command line"; Arguments = @("-Cycles", "11") },
+            @{ Label = "config file"; Arguments = @("-ConfigPath", $configPath) }
+          )
+          foreach ($testCase in $cases) {
+            $arguments = $testCase.Arguments
+            $output = & powershell.exe -NoProfile -ExecutionPolicy Bypass `
+              -File .\run-goose.ps1 @arguments 2>&1 | Out-String
+            if ($LASTEXITCODE -ne 1) {
+              throw "Expected exit code 1 for $($testCase.Label)"
+            }
+            if ($output -notmatch "颠锅次数 cycles 必须在 1 到 10 之间") {
+              throw "Expected clear Chinese cycle-limit error. Output: $output"
+            }
+          }
       - name: Run tests
         run: python -m unittest discover -s tests -v
